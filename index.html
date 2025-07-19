@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スタッフ認証</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>特典配布システム</h1>
+        <p>担当スタッフ名を入力してください</p>
+        <input type="text" id="staff-name-input" placeholder="スタッフ名">
+        <button id="start-button">開始</button>
+    </div>
+
+    <script>
+        document.getElementById('start-button').addEventListener('click', () => {
+            const staffName = document.getElementById('staff-name-input').value;
+            if (staffName) {
+                localStorage.setItem('fanclub-staff-name', staffName);
+                window.location.href = 'app.html';
+            } else {
+                alert('スタッフ名を入力してください。');
+            }
+        });
+
+        // 以前入力した名前を復元
+        const savedStaffName = localStorage.getItem('fanclub-staff-name');
+        if (savedStaffName) {
+            document.getElementById('staff-name-input').value = savedStaffName;
+        }
+    </script>
+</body>
+</html>
