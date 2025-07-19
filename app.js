@@ -1,29 +1,34 @@
-// ログイン状態をチェック
-checkAuthState();
+// ▼▼▼ 冒頭部分を修正 ▼▼▼
+checkAuthState(); // まずログインしているかチェック
 
-let staffEmail = ''; // スタッフのメールアドレスを保持する変数
+let staffEmail = '';
 
-// ログインユーザーの情報を取得
 auth.onAuthStateChanged((user) => {
     if (user) {
+        // ログインしているユーザーのメールアドレスを取得
         staffEmail = user.email;
-        document.getElementById('staff-email-display').textContent = staffEmail;
-        // ユーザー情報が取得できてから各種処理を初期化
+        // ページの初期化処理を呼び出す
         initializePage();
     }
 });
+// ▲▲▲ 修正ここまで ▲▲▲
 
-// ▼▼▼ ページ初期化処理を関数にまとめる ▼▼▼
 function initializePage() {
     const eventId = localStorage.getItem('fanclub-event-id');
     const eventName = localStorage.getItem('fanclub-event-name');
 
     if (!eventId) {
-        alert("イベントが選択されていません。再度ログインからやり直してください。");
-        auth.signOut().then(() => { window.location.href = 'index.html'; });
+        alert("イベントが選択されていません。ログインページに戻ります。");
+        window.location.href = 'index.html';
         return;
     }
-
+    
+    // ▼▼▼ `staff-email-display` に担当者情報を表示 ▼▼▼
+    const staffDisplay = document.getElementById('staff-email-display');
+    if (staffDisplay) {
+        staffDisplay.textContent = staffEmail;
+    }
+    
     const eventInfoDiv = document.createElement('div');
     eventInfoDiv.className = 'event-info';
     eventInfoDiv.innerHTML = `イベント: <strong>${eventName}</strong>`;
@@ -65,6 +70,7 @@ function initializePage() {
                 showAlert(`【ツアーで配布済み】\nこの会員は既に「${previousEventName}」で特典を受け取っています。`, 'error');
             } else {
                 const batch = db.batch();
+                // ▼▼▼ staffName を staffEmail に変更 ▼▼▼
                 const distributionData = { memberId: memberId, staffName: staffEmail, distributedAt: new Date(), eventId: eventId, eventName: eventName };
                 const eventDocRef = eventCollectionRef.doc(memberId);
                 batch.set(eventDocRef, distributionData); batch.set(masterDocRef, distributionData);
