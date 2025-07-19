@@ -138,14 +138,16 @@ memberIdInput.addEventListener('keypress', (e) => {
 // ▼▼▼ ここからが修正箇所です ▼▼▼
 // 全角文字の入力をブロックするイベントリスナー
 memberIdInput.addEventListener('input', (e) => {
-    const value = e.target.value;
-    // 全角文字を検知するための正規表現（英数、カタカナ、ひらがな、記号などを含む）
-    const fullWidthRegex = /[^\x00-\x7F]/;
+    const input = e.target;
+    const originalValue = input.value;
     
-    if (fullWidthRegex.test(value)) {
-        // 全角文字が含まれていたら、それらをすべて除去する
-        // これにより、入力された全角文字が即座に消える
-        e.target.value = value.replace(fullWidthRegex, '');
+    // 全角文字を検知して、すべて除去する
+    // 正規表現の末尾の「g」が、すべての文字を対象にするために重要です
+    const sanitizedValue = originalValue.replace(/[^\x00-\x7F]/g, '');
+
+    // 値が変更された場合のみ、入力内容を更新する
+    if (originalValue !== sanitizedValue) {
+        input.value = sanitizedValue;
     }
 });
 // ▲▲▲ ここまでが修正箇所です ▲▲▲
