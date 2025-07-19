@@ -201,3 +201,11 @@ thead th {
 tbody tr:nth-child(even) {
     background-color: #333;
 }
+
+/* style.cssの一番下に追加 */
+.danger-button {
+    background-color: #e63946 !important;
+}
+.danger-button:hover {
+    background-color: #d62828 !important;
+}
