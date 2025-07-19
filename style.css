@@ -209,3 +209,14 @@ tbody tr:nth-child(even) {
 .danger-button:hover {
     background-color: #d62828 !important;
 }
+
+/* style.cssの一番下に追加 */
+.event-info {
+    width: 100%;
+    text-align: center;
+    background-color: #004a7f;
+    padding: 8px 0;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 16px;
+}
