@@ -7,16 +7,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-   <div class="container app-container">
+    <div class="container app-container">
         <div class="header">
             <h2>特典配布</h2>
             <div class="staff-info">
-                担当: <span id="staff-name-display"></span>
+                担当: <span id="staff-email-display"></span>
             </div>
         </div>
 
         <div class="counters">
-            ...
             <div class="counter-box">
                 <p>当日配布数</p>
                 <h3 id="today-count">0</h3>
@@ -42,16 +41,17 @@
 
         <div class="footer-nav">
             <a href="history.html">配布履歴を見る</a>
-            <a href="index.html" class="logout">スタッフ変更</a>
+            <a href="#" id="logout-button" class="logout">ログアウト</a>
         </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
 
     <script src="firebase-config.js"></script>
-    <script src="app.js"></script>
+    <script src="auth.js"></script> <script src="app.js"></script>
 </body>
 </html>
