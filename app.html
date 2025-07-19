@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特典配布ページ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container app-container">
+        <div class="header">
+            <h2>特典配布</h2>
+            <div class="staff-info">
+                担当: <span id="staff-name-display"></span>
+            </div>
+        </div>
+
+        <div class="counters">
+            <div class="counter-box">
+                <p>当日配布数</p>
+                <h3 id="today-count">0</h3>
+            </div>
+            <div class="counter-box">
+                <p>累計配布数</p>
+                <h3 id="total-count">0</h3>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="member-id-input" placeholder="会員番号を入力">
+            <button id="submit-button">配布</button>
+        </div>
+
+        <div class="qr-area">
+            <button id="start-qr-button">QRコードをスキャン</button>
+            <div id="qr-reader" style="width: 100%; max-width: 400px; margin-top: 10px;"></div>
+            <button id="stop-qr-button" style="display: none;">スキャンを停止</button>
+        </div>
+
+        <div id="alert-message"></div>
+
+        <div class="footer-nav">
+            <a href="history.html">配布履歴を見る</a>
+            <a href="index.html" class="logout">スタッフ変更</a>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
