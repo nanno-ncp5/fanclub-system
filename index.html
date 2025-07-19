@@ -77,4 +77,46 @@
             userEmailDisplay.textContent = user.email;
         }
 
-        // ログイン状態の
+        // ログイン状態の監視
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // ログイン済みならイベント選択画面を表示
+                showEventSelectView(user);
+            } else {
+                // 未ログインならログイン画面を表示
+                showLoginView();
+            }
+        });
+
+        // ログインボタンの処理
+        loginButton.addEventListener('click', () => {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            errorMessageDiv.classList.add('hidden');
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => {
+                    errorMessageDiv.textContent = 'メールアドレスまたはパスワードが違います。';
+                    errorMessageDiv.classList.remove('hidden');
+                });
+        });
+
+        // 作業開始ボタンの処理
+        startButton.addEventListener('click', () => {
+            const eventSelect = document.getElementById('event-select');
+            const eventId = eventSelect.value;
+            const eventName = eventSelect.options[eventSelect.selectedIndex].text;
+            
+            localStorage.setItem('fanclub-event-id', eventId);
+            localStorage.setItem('fanclub-event-name', eventName);
+            window.location.href = 'app.html';
+        });
+
+        // ログアウトリンクの処理
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.signOut();
+        });
+    </script>
+</body>
+</html>
