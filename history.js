@@ -2,15 +2,20 @@ const historyTableBody = document.getElementById('history-table-body');
 const deleteMemberIdInput = document.getElementById('delete-member-id-input');
 const deleteButton = document.getElementById('delete-button');
 const csvExportButton = document.getElementById('csv-export-button');
+const searchInput = document.getElementById('search-input'); // ★追加
+const resetButton = document.getElementById('reset-button'); // ★追加
 const collectionName = "distributions";
 
-let allHistoryData = []; // CSV出力用に全データを保持
+// ▼▼▼ このパスワードを必ず変更してください ▼▼▼
+const RESET_PASSWORD = "password123"; // ★リセット操作用のパスワード
+
+let allHistoryData = [];
 
 // --- 履歴をリアルタイムで表示 ---
 db.collection(collectionName).orderBy('distributedAt', 'desc')
   .onSnapshot(snapshot => {
-    historyTableBody.innerHTML = ''; // 一旦クリア
-    allHistoryData = []; // データもクリア
+    historyTableBody.innerHTML = '';
+    allHistoryData = [];
 
     if (snapshot.empty) {
         historyTableBody.innerHTML = '<tr><td colspan="3">まだ配布履歴がありません。</td></tr>';
@@ -19,7 +24,7 @@ db.collection(collectionName).orderBy('distributedAt', 'desc')
 
     snapshot.forEach(doc => {
         const data = doc.data();
-        allHistoryData.push(data); // CSV用に保存
+        allHistoryData.push(data);
 
         const tr = document.createElement('tr');
         const distributedDate = data.distributedAt.toDate().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -35,6 +40,54 @@ db.collection(collectionName).orderBy('distributedAt', 'desc')
     console.error("Error fetching history: ", error);
     historyTableBody.innerHTML = '<tr><td colspan="3">履歴の読み込みに失敗しました。</td></tr>';
   });
+
+// --- ★検索機能 ---
+searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = historyTableBody.getElementsByTagName('tr');
+
+    for (const row of rows) {
+        // 2番目のセル（会員番号）のテキストを取得
+        const memberIdCell = row.cells[1];
+        if (memberIdCell) {
+            const memberIdText = memberIdCell.textContent.toLowerCase();
+            if (memberIdText.includes(searchTerm)) {
+                row.style.display = ''; // 一致したら表示
+            } else {
+                row.style.display = 'none'; // 一致しなかったら非表示
+            }
+        }
+    }
+});
+
+// --- ★全履歴リセット機能 ---
+resetButton.addEventListener('click', async () => {
+    const inputPassword = prompt("全履歴をリセットします。パスワードを入力してください：");
+
+    if (inputPassword === null) return; // キャンセルされた場合
+
+    if (inputPassword !== RESET_PASSWORD) {
+        alert("パスワードが違います。");
+        return;
+    }
+
+    if (confirm("本当によろしいですか？すべての配布履歴が完全に削除され、元に戻すことはできません。")) {
+        // Firestoreのコレクション内の全ドキュメントを削除
+        try {
+            const querySnapshot = await db.collection(collectionName).get();
+            const batch = db.batch();
+            querySnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            alert("全履歴をリセットしました。");
+        } catch (error) {
+            console.error("Error resetting history: ", error);
+            alert("リセット中にエラーが発生しました。");
+        }
+    }
+});
+
 
 // --- 履歴削除機能 ---
 deleteButton.addEventListener('click', async () => {
@@ -73,7 +126,7 @@ csvExportButton.addEventListener('click', () => {
     }
 
     const csvData = convertToCSV(allHistoryData);
-    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // UTF-8 BOM (文字化け対策)
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
 
