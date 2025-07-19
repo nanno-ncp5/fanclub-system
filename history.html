@@ -19,8 +19,8 @@
                 <input type="text" id="delete-member-id-input" placeholder="削除する会員番号">
                 <button id="delete-button">削除</button>
             </div>
-             <button id="reset-button" class="danger-button">全履歴をリセット</button>
-             </div>
+            <button id="reset-button" class="danger-button">全履歴をリセット</button>
+        </div>
 
         <div class="table-wrapper">
             <table>
@@ -42,7 +42,11 @@
         </div>
     </div>
 
+    <div id="debug-output" style="position: fixed; bottom: 10px; left: 10px; right: 10px; background-color: #000; color: #0f0; border: 2px solid #0f0; padding: 10px; font-family: monospace; font-size: 12px; z-index: 9999; max-height: 150px; overflow-y: auto;">
+        <p style="margin: 0; padding: 0; font-weight: bold; border-bottom: 1px solid #0f0; margin-bottom: 5px;">【診断モード】</p>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
     <script src="firebase-config.js"></script>
