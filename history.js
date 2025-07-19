@@ -35,7 +35,7 @@ function initializeHistoryPage() {
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
     
     // パスワードは本来、より安全な方法で管理すべきですが今回はこのままにします
-    const RESET_PASSWORD = "password123"; 
+    const RESET_PASSWORD = "ncp5"; 
 
     let allHistoryData = [];
 
