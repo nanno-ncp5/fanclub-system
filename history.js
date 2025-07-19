@@ -1,3 +1,4 @@
+checkAuthState();
 // --- 初期設定 ---
 const eventId = localStorage.getItem('fanclub-event-id');
 const eventName = localStorage.getItem('fanclub-event-name');
