@@ -33,12 +33,16 @@
             <div class="form-group">
                 <label for="event-select">イベントを選択</label>
                 <select id="event-select">
-                    <option value="tour2025-tokyo-day1">2025 Tour 東京公演 1日目</option>
-                    <option value="tour2025-tokyo-day2">2025 Tour 東京公演 2日目</option>
-                    <option value="tour2025-osaka-day1">2025 Tour 大阪公演 1日目</option>
-                    <option value="tour2025-osaka-day2">2025 Tour 大阪公演 2日目</option>
+                    <option value="20250727-nhk-hall">7月27日(日)　NHKホール</option>
+                    <option value="20250731-fukuoka">7月31日(木)　福岡国際会議場</option>
+                    <option value="20250809-nhk-osaka">8月9日(土)  　NHK大阪ホール</option>
+                    <option value="20250810-nhk-osaka">8月10日(日)　NHK大阪ホール</option>
+                    <option value="20250816-nagoya">8月16日(土)　Niterra 日本特殊陶業市民会館</option>
+                    <option value="20250823-sendai">8月23日(土)　電力ホール (仙台)</option>
+                    <option value="20250826-line-cube">8月26日(火)　LINE CUBE SHIBUYA</option>
+                    <option value="20250921-hachioji">9月21日(日) 　J:COMホール八王子</option>
                     <option value="test-event">テスト用イベント</option>
-                </select>
+                    </select>
             </div>
             <button id="start-button">作業開始</button>
             <a href="#" id="logout-link" style="display: block; margin-top: 20px; color: #ffaa00;">ログアウト</a>
@@ -73,46 +77,4 @@
             userEmailDisplay.textContent = user.email;
         }
 
-        // ログイン状態の監視
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // ログイン済みならイベント選択画面を表示
-                showEventSelectView(user);
-            } else {
-                // 未ログインならログイン画面を表示
-                showLoginView();
-            }
-        });
-
-        // ログインボタンの処理
-        loginButton.addEventListener('click', () => {
-            const email = document.getElementById('email-input').value;
-            const password = document.getElementById('password-input').value;
-            errorMessageDiv.classList.add('hidden');
-
-            auth.signInWithEmailAndPassword(email, password)
-                .catch((error) => {
-                    errorMessageDiv.textContent = 'メールアドレスまたはパスワードが違います。';
-                    errorMessageDiv.classList.remove('hidden');
-                });
-        });
-
-        // 作業開始ボタンの処理
-        startButton.addEventListener('click', () => {
-            const eventSelect = document.getElementById('event-select');
-            const eventId = eventSelect.value;
-            const eventName = eventSelect.options[eventSelect.selectedIndex].text;
-            
-            localStorage.setItem('fanclub-event-id', eventId);
-            localStorage.setItem('fanclub-event-name', eventName);
-            window.location.href = 'app.html';
-        });
-
-        // ログアウトリンクの処理
-        logoutLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            auth.signOut();
-        });
-    </script>
-</body>
-</html>
+        // ログイン状態の
