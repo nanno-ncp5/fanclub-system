@@ -16,6 +16,16 @@ const stopQrButton = document.getElementById('stop-qr-button');
 
 const collectionName = "distributions"; // Firestoreのコレクション名
 
+// ★★★ここから追加★★★
+// 全角英数字を半角に変換する関数
+function toHalfWidth(str) {
+    if (!str) return str;
+    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+}
+// ★★★ここまで追加★★★
+
 // --- カウンター機能 ---
 function updateCounters() {
     // 累計カウント
@@ -133,6 +143,20 @@ memberIdInput.addEventListener('keypress', (e) => {
         handleDistribution(memberIdInput.value.trim());
     }
 });
+
+// ★★★ここから追加★★★
+// 入力中にリアルタイムで半角に変換するイベントリスナー
+memberIdInput.addEventListener('input', () => {
+    const currentValue = memberIdInput.value;
+    const halfWidthValue = toHalfWidth(currentValue);
+    if (currentValue !== halfWidthValue) {
+        // 変換前後で値が異なる場合のみ、値を更新
+        // これにより、カーソルの位置が不必要に移動するのを防ぐ
+        memberIdInput.value = halfWidthValue;
+    }
+});
+// ★★★ここまで追加★★★
+
 
 // --- 初期化処理 ---
 document.addEventListener('DOMContentLoaded', () => {
