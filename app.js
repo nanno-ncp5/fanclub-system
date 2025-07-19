@@ -1,22 +1,17 @@
 // --- 初期設定 ---
 const staffName = localStorage.getItem('fanclub-staff-name');
-const eventId = localStorage.getItem('fanclub-event-id'); // ★イベントIDを取得
-const eventName = localStorage.getItem('fanclub-event-name'); // ★イベント名を取得
+const eventId = localStorage.getItem('fanclub-event-id');
+const eventName = localStorage.getItem('fanclub-event-name');
 
-// スタッフ名かイベントIDがなければTOPページに戻す
 if (!staffName || !eventId) {
     window.location.href = 'index.html';
 }
 
-// 画面にスタッフ名とイベント名を表示
 document.getElementById('staff-name-display').textContent = staffName;
-// イベント名を表示する要素をapp.htmlに追加する必要があります。
-// 先にapp.htmlを更新しましょう。
 const eventInfoDiv = document.createElement('div');
 eventInfoDiv.className = 'event-info';
 eventInfoDiv.innerHTML = `イベント: <strong>${eventName}</strong>`;
 document.querySelector('.header').insertAdjacentElement('afterend', eventInfoDiv);
-
 
 const memberIdInput = document.getElementById('member-id-input');
 const submitButton = document.getElementById('submit-button');
@@ -26,10 +21,13 @@ const todayCountEl = document.getElementById('today-count');
 const startQrButton = document.getElementById('start-qr-button');
 const stopQrButton = document.getElementById('stop-qr-button');
 
-// ▼▼▼ Firestoreの参照先をイベントごとのサブコレクションに変更 ▼▼▼
+// --- ▼▼▼ Firestoreの参照先を2種類定義 ▼▼▼ ---
+// 1. イベントごとの詳細な履歴（日報）
 const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
+// 2. ツアー全体の配布済み名簿
+const masterCollectionRef = db.collection("master_distributions");
+// --- ▲▲▲ ---
 
-// 全角英数字を半角に変換するヘルパー関数
 function toHalfWidth(str) {
     if (!str) return "";
     return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
@@ -37,14 +35,12 @@ function toHalfWidth(str) {
     });
 }
 
-// --- カウンター機能 ---
+// --- カウンター機能（変更なし） ---
 function updateCounters() {
-    // 累計カウント（選択したイベントの）
     eventCollectionRef.get().then(snap => {
         totalCountEl.textContent = snap.size;
     });
 
-    // 当日カウント
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
@@ -57,7 +53,7 @@ function updateCounters() {
       });
 }
 
-// --- 配布処理 ---
+// --- ▼▼▼ 配布処理を大幅に更新 ▼▼▼ ---
 async function handleDistribution(rawMemberId) {
     const memberId = toHalfWidth(rawMemberId).trim();
     if (!memberId) {
@@ -69,20 +65,39 @@ async function handleDistribution(rawMemberId) {
     memberIdInput.disabled = true;
     submitButton.disabled = true;
 
-    const docRef = eventCollectionRef.doc(memberId);
-    
     try {
-        const doc = await docRef.get();
-        if (doc.exists) {
-            const data = doc.data();
-            const distributedDate = data.distributedAt.toDate().toLocaleString('ja-JP');
-            showAlert(`【配布済み】\nこの会員は既に受け取っています。\n(日時: ${distributedDate} / 担当: ${data.staffName})`, 'error');
+        // 1. まず「ツアー全体の配布済み名簿」をチェック
+        const masterDocRef = masterCollectionRef.doc(memberId);
+        const masterDoc = await masterDocRef.get();
+
+        if (masterDoc.exists) {
+            // もし名簿に存在したら、配布済みアラートを表示
+            const data = masterDoc.data();
+            showAlert(`【ツアーで配布済み】\nこの会員は既に「${data.eventName}」で特典を受け取っています。`, 'error');
         } else {
-            await docRef.set({
+            // 2. 名簿になければ、配布処理を実行
+            // データを2箇所に書き込むため、バッチ処理で確実に行う
+            const batch = db.batch();
+
+            // 書込データ定義
+            const distributionData = {
                 memberId: memberId,
                 staffName: staffName,
-                distributedAt: new Date()
-            });
+                distributedAt: new Date(),
+                eventId: eventId,
+                eventName: eventName
+            };
+
+            // 2-1. 「イベントごとの日報」に記録
+            const eventDocRef = eventCollectionRef.doc(memberId);
+            batch.set(eventDocRef, distributionData);
+
+            // 2-2. 「ツアー全体の配布済み名簿」に記録
+            batch.set(masterDocRef, distributionData);
+
+            // 3. バッチ処理を実行
+            await batch.commit();
+
             showAlert('配布完了しました！', 'success');
             updateCounters();
         }
@@ -96,23 +111,22 @@ async function handleDistribution(rawMemberId) {
     submitButton.disabled = false;
     memberIdInput.focus();
 }
+// --- ▲▲▲ 配布処理の更新ここまで ▲▲▲ ---
 
 function showAlert(message, type) {
     alertMessage.textContent = message;
     alertMessage.className = type;
     alertMessage.style.display = 'block';
-    setTimeout(() => { alertMessage.style.display = 'none'; }, 5000);
+    setTimeout(() => { alertMessage.style.display = 'none'; }, 6000); // 少し長めに表示
 }
 
-// (QRコードリーダーとイベントリスナーのコードは変更なしなので省略)
-// --- QRコードリーダー ---
+// (QRコードリーダーとイベントリスナーのコードは変更なし)
 let html5QrCode = null;
 function onScanSuccess(decodedText, decodedResult) { html5QrCode.stop().then(() => { toggleScannerButtons(false); handleDistribution(decodedText); }).catch(err => console.error(err)); }
 function onScanFailure(error) {}
 function toggleScannerButtons(isScanning) { startQrButton.style.display = isScanning ? 'none' : 'block'; stopQrButton.style.display = isScanning ? 'block' : 'none'; document.getElementById('qr-reader').style.display = isScanning ? 'block' : 'none'; }
 startQrButton.addEventListener('click', () => { html5QrCode = new Html5Qrcode("qr-reader"); toggleScannerButtons(true); html5QrCode.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure ).catch(err => { alert("カメラの起動に失敗しました。"); toggleScannerButtons(false); }); });
 stopQrButton.addEventListener('click', () => { if (html5QrCode) { html5QrCode.stop().then(() => { toggleScannerButtons(false); }).catch(err => console.error(err)); } });
-// --- イベントリスナー ---
 submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
 memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
 
