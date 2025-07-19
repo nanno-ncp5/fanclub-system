@@ -2,14 +2,24 @@ const historyTableBody = document.getElementById('history-table-body');
 const deleteMemberIdInput = document.getElementById('delete-member-id-input');
 const deleteButton = document.getElementById('delete-button');
 const csvExportButton = document.getElementById('csv-export-button');
-const searchInput = document.getElementById('search-input'); // ★追加
-const resetButton = document.getElementById('reset-button'); // ★追加
+const searchInput = document.getElementById('search-input');
+const resetButton = document.getElementById('reset-button');
 const collectionName = "distributions";
 
 // ▼▼▼ このパスワードを必ず変更してください ▼▼▼
-const RESET_PASSWORD = "ncp5"; // ★リセット操作用のパスワード
+const RESET_PASSWORD = "ncp5"; // リセット操作用のパスワード
 
 let allHistoryData = [];
+
+// --- ★★★ここから追加★★★ ---
+// 全角英数字を半角に変換する関数
+function toHalfWidth(str) {
+    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+}
+// --- ★★★ここまで追加★★★ ---
+
 
 // --- 履歴をリアルタイムで表示 ---
 db.collection(collectionName).orderBy('distributedAt', 'desc')
@@ -41,38 +51,39 @@ db.collection(collectionName).orderBy('distributedAt', 'desc')
     historyTableBody.innerHTML = '<tr><td colspan="3">履歴の読み込みに失敗しました。</td></tr>';
   });
 
-// --- ★検索機能 ---
+// --- 検索機能 ---
 searchInput.addEventListener('input', (e) => {
     const searchTerm = e.target.value.toLowerCase();
     const rows = historyTableBody.getElementsByTagName('tr');
 
     for (const row of rows) {
-        // 2番目のセル（会員番号）のテキストを取得
         const memberIdCell = row.cells[1];
         if (memberIdCell) {
             const memberIdText = memberIdCell.textContent.toLowerCase();
             if (memberIdText.includes(searchTerm)) {
-                row.style.display = ''; // 一致したら表示
+                row.style.display = '';
             } else {
-                row.style.display = 'none'; // 一致しなかったら非表示
+                row.style.display = 'none';
             }
         }
     }
 });
 
-// --- ★全履歴リセット機能 ---
+// --- 全履歴リセット機能 ---
 resetButton.addEventListener('click', async () => {
     const inputPassword = prompt("全履歴をリセットします。パスワードを入力してください：");
 
-    if (inputPassword === null) return; // キャンセルされた場合
+    if (inputPassword === null) return;
 
-    if (inputPassword !== RESET_PASSWORD) {
+    // --- ▼▼▼ ここを変更 ▼▼▼ ---
+    const normalizedInput = toHalfWidth(inputPassword).trim(); // 入力された文字を半角に変換し、前後の空白を削除
+    if (normalizedInput !== RESET_PASSWORD) {
+    // --- ▲▲▲ ここを変更 ▲▲▲ ---
         alert("パスワードが違います。");
         return;
     }
 
     if (confirm("本当によろしいですか？すべての配布履歴が完全に削除され、元に戻すことはできません。")) {
-        // Firestoreのコレクション内の全ドキュメントを削除
         try {
             const querySnapshot = await db.collection(collectionName).get();
             const batch = db.batch();
