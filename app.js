@@ -16,6 +16,17 @@ const stopQrButton = document.getElementById('stop-qr-button');
 
 const collectionName = "distributions"; // Firestoreのコレクション名
 
+// ▼▼▼ ここからが修正箇所です ▼▼▼
+// 全角英数字を半角に変換するヘルパー関数
+function toHalfWidth(str) {
+    if (!str) return "";
+    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+}
+// ▲▲▲ ここまでが修正箇所です ▲▲▲
+
+
 // --- カウンター機能 ---
 function updateCounters() {
     // 累計カウント
@@ -37,8 +48,18 @@ function updateCounters() {
 }
 
 // --- 配布処理 ---
-async function handleDistribution(memberId) {
-    if (!memberId) return;
+// ▼▼▼ ここからが修正箇所です ▼▼▼
+async function handleDistribution(rawMemberId) {
+    // この関数の最初に、受け取った会員番号を半角に変換・空白除去する
+    const memberId = toHalfWidth(rawMemberId).trim();
+
+    if (!memberId) {
+        // 全角スペースのみの入力などで空になった場合は処理を中断
+        alert("会員番号を入力してください。");
+        memberIdInput.value = ''; // 入力欄をクリア
+        return;
+    }
+// ▲▲▲ ここまでが修正箇所です ▲▲▲
     
     memberIdInput.disabled = true;
     submitButton.disabled = true;
@@ -53,12 +74,12 @@ async function handleDistribution(memberId) {
             showAlert(`【配布済み】\nこの会員は既に受け取っています。\n(日時: ${distributedDate} / 担当: ${data.staffName})`, 'error');
         } else {
             await docRef.set({
-                memberId: memberId,
+                memberId: memberId, // 半角化されたIDを保存
                 staffName: staffName,
                 distributedAt: new Date()
             });
             showAlert('配布完了しました！', 'success');
-            updateCounters(); // 配布後にカウンターを即時更新
+            updateCounters();
         }
     } catch (error) {
         console.error("Error processing distribution: ", error);
@@ -78,7 +99,7 @@ function showAlert(message, type) {
 
     setTimeout(() => {
         alertMessage.style.display = 'none';
-    } , 5000); // 5秒後にメッセージを消す
+    } , 5000);
 }
 
 // --- QRコードリーダー ---
@@ -92,7 +113,7 @@ function onScanSuccess(decodedText, decodedResult) {
 }
 
 function onScanFailure(error) {
-    // スキャン失敗時は何もしない
+    // 何もしない
 }
 
 function toggleScannerButtons(isScanning) {
@@ -105,11 +126,8 @@ startQrButton.addEventListener('click', () => {
     html5QrCode = new Html5Qrcode("qr-reader");
     toggleScannerButtons(true);
     html5QrCode.start(
-        { facingMode: "environment" }, // 背面カメラを使用
-        {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-        },
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
         onScanSuccess,
         onScanFailure
     ).catch(err => {
@@ -127,31 +145,17 @@ stopQrButton.addEventListener('click', () => {
 });
 
 // --- イベントリスナー ---
-submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value.trim()));
+// ▼▼▼ ここからが修正箇所です ▼▼▼
+// handleDistributionに生の値を渡すだけにする
+submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
 memberIdInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        handleDistribution(memberIdInput.value.trim());
+        handleDistribution(memberIdInput.value);
     }
 });
 
-
-// ▼▼▼ ここからが修正箇所です ▼▼▼
-// 全角文字の入力をブロックするイベントリスナー
-memberIdInput.addEventListener('input', (e) => {
-    const input = e.target;
-    const originalValue = input.value;
-    
-    // 全角文字を検知して、すべて除去する
-    // 正規表現の末尾の「g」が、すべての文字を対象にするために重要です
-    const sanitizedValue = originalValue.replace(/[^\x00-\x7F]/g, '');
-
-    // 値が変更された場合のみ、入力内容を更新する
-    if (originalValue !== sanitizedValue) {
-        input.value = sanitizedValue;
-    }
-});
+// 以前の入力監視リスナーは完全に削除します
 // ▲▲▲ ここまでが修正箇所です ▲▲▲
-
 
 // --- 初期化処理 ---
 document.addEventListener('DOMContentLoaded', () => {
