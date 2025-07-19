@@ -1,10 +1,22 @@
 // --- 初期設定 ---
 const staffName = localStorage.getItem('fanclub-staff-name');
-if (!staffName) {
-    window.location.href = 'index.html'; // スタッフ名がなければTOPへ
+const eventId = localStorage.getItem('fanclub-event-id'); // ★イベントIDを取得
+const eventName = localStorage.getItem('fanclub-event-name'); // ★イベント名を取得
+
+// スタッフ名かイベントIDがなければTOPページに戻す
+if (!staffName || !eventId) {
+    window.location.href = 'index.html';
 }
 
+// 画面にスタッフ名とイベント名を表示
 document.getElementById('staff-name-display').textContent = staffName;
+// イベント名を表示する要素をapp.htmlに追加する必要があります。
+// 先にapp.htmlを更新しましょう。
+const eventInfoDiv = document.createElement('div');
+eventInfoDiv.className = 'event-info';
+eventInfoDiv.innerHTML = `イベント: <strong>${eventName}</strong>`;
+document.querySelector('.header').insertAdjacentElement('afterend', eventInfoDiv);
+
 
 const memberIdInput = document.getElementById('member-id-input');
 const submitButton = document.getElementById('submit-button');
@@ -14,9 +26,9 @@ const todayCountEl = document.getElementById('today-count');
 const startQrButton = document.getElementById('start-qr-button');
 const stopQrButton = document.getElementById('stop-qr-button');
 
-const collectionName = "distributions"; // Firestoreのコレクション名
+// ▼▼▼ Firestoreの参照先をイベントごとのサブコレクションに変更 ▼▼▼
+const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
 
-// ▼▼▼ ここからが修正箇所です ▼▼▼
 // 全角英数字を半角に変換するヘルパー関数
 function toHalfWidth(str) {
     if (!str) return "";
@@ -24,13 +36,11 @@ function toHalfWidth(str) {
         return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
     });
 }
-// ▲▲▲ ここまでが修正箇所です ▲▲▲
-
 
 // --- カウンター機能 ---
 function updateCounters() {
-    // 累計カウント
-    db.collection(collectionName).get().then(snap => {
+    // 累計カウント（選択したイベントの）
+    eventCollectionRef.get().then(snap => {
         totalCountEl.textContent = snap.size;
     });
 
@@ -39,7 +49,7 @@ function updateCounters() {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-    db.collection(collectionName)
+    eventCollectionRef
       .where('distributedAt', '>=', startOfDay)
       .where('distributedAt', '<', endOfDay)
       .onSnapshot(snapshot => {
@@ -48,23 +58,18 @@ function updateCounters() {
 }
 
 // --- 配布処理 ---
-// ▼▼▼ ここからが修正箇所です ▼▼▼
 async function handleDistribution(rawMemberId) {
-    // この関数の最初に、受け取った会員番号を半角に変換・空白除去する
     const memberId = toHalfWidth(rawMemberId).trim();
-
     if (!memberId) {
-        // 全角スペースのみの入力などで空になった場合は処理を中断
         alert("会員番号を入力してください。");
-        memberIdInput.value = ''; // 入力欄をクリア
+        memberIdInput.value = '';
         return;
     }
-// ▲▲▲ ここまでが修正箇所です ▲▲▲
     
     memberIdInput.disabled = true;
     submitButton.disabled = true;
 
-    const docRef = db.collection(collectionName).doc(memberId);
+    const docRef = eventCollectionRef.doc(memberId);
     
     try {
         const doc = await docRef.get();
@@ -74,7 +79,7 @@ async function handleDistribution(rawMemberId) {
             showAlert(`【配布済み】\nこの会員は既に受け取っています。\n(日時: ${distributedDate} / 担当: ${data.staffName})`, 'error');
         } else {
             await docRef.set({
-                memberId: memberId, // 半角化されたIDを保存
+                memberId: memberId,
                 staffName: staffName,
                 distributedAt: new Date()
             });
@@ -94,68 +99,22 @@ async function handleDistribution(rawMemberId) {
 
 function showAlert(message, type) {
     alertMessage.textContent = message;
-    alertMessage.className = type; // 'success' or 'error'
+    alertMessage.className = type;
     alertMessage.style.display = 'block';
-
-    setTimeout(() => {
-        alertMessage.style.display = 'none';
-    } , 5000);
+    setTimeout(() => { alertMessage.style.display = 'none'; }, 5000);
 }
 
+// (QRコードリーダーとイベントリスナーのコードは変更なしなので省略)
 // --- QRコードリーダー ---
 let html5QrCode = null;
-
-function onScanSuccess(decodedText, decodedResult) {
-    html5QrCode.stop().then(() => {
-        toggleScannerButtons(false);
-        handleDistribution(decodedText);
-    }).catch(err => console.error(err));
-}
-
-function onScanFailure(error) {
-    // 何もしない
-}
-
-function toggleScannerButtons(isScanning) {
-    startQrButton.style.display = isScanning ? 'none' : 'block';
-    stopQrButton.style.display = isScanning ? 'block' : 'none';
-    document.getElementById('qr-reader').style.display = isScanning ? 'block' : 'none';
-}
-
-startQrButton.addEventListener('click', () => {
-    html5QrCode = new Html5Qrcode("qr-reader");
-    toggleScannerButtons(true);
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess,
-        onScanFailure
-    ).catch(err => {
-        alert("カメラの起動に失敗しました。");
-        toggleScannerButtons(false);
-    });
-});
-
-stopQrButton.addEventListener('click', () => {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            toggleScannerButtons(false);
-        }).catch(err => console.error(err));
-    }
-});
-
+function onScanSuccess(decodedText, decodedResult) { html5QrCode.stop().then(() => { toggleScannerButtons(false); handleDistribution(decodedText); }).catch(err => console.error(err)); }
+function onScanFailure(error) {}
+function toggleScannerButtons(isScanning) { startQrButton.style.display = isScanning ? 'none' : 'block'; stopQrButton.style.display = isScanning ? 'block' : 'none'; document.getElementById('qr-reader').style.display = isScanning ? 'block' : 'none'; }
+startQrButton.addEventListener('click', () => { html5QrCode = new Html5Qrcode("qr-reader"); toggleScannerButtons(true); html5QrCode.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure ).catch(err => { alert("カメラの起動に失敗しました。"); toggleScannerButtons(false); }); });
+stopQrButton.addEventListener('click', () => { if (html5QrCode) { html5QrCode.stop().then(() => { toggleScannerButtons(false); }).catch(err => console.error(err)); } });
 // --- イベントリスナー ---
-// ▼▼▼ ここからが修正箇所です ▼▼▼
-// handleDistributionに生の値を渡すだけにする
 submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
-memberIdInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        handleDistribution(memberIdInput.value);
-    }
-});
-
-// 以前の入力監視リスナーは完全に削除します
-// ▲▲▲ ここまでが修正箇所です ▲▲▲
+memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
 
 // --- 初期化処理 ---
 document.addEventListener('DOMContentLoaded', () => {
