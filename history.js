@@ -1,11 +1,13 @@
 // ▼▼▼ 全体の構造を修正 ▼▼▼
-checkAuthState(); // まず、未ログインならログインページへ飛ばす
-
 // 認証状態の確定を待ってから、ページの処理を開始する
 auth.onAuthStateChanged((user) => {
     if (user) {
         // ログインが確認できたら、初めてページの初期化処理を呼び出す
         initializeHistoryPage();
+    } else {
+        // 未ログインなら、ログインページに強制的に戻す
+        console.log("User not logged in. Redirecting to login page.");
+        window.location.href = 'index.html';
     }
 });
 
@@ -31,16 +33,16 @@ function initializeHistoryPage() {
     const resetButton = document.getElementById('reset-button');
 
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
-
-    // ▼▼▼ パスワードは安全のため、コードに直接書くのは非推奨ですが、今回はこのままにします ▼▼▼
-    const RESET_PASSWORD = "ncp5";
+    
+    // パスワードは本来、より安全な方法で管理すべきですが今回はこのままにします
+    const RESET_PASSWORD = "password123"; 
 
     let allHistoryData = [];
 
     // --- 履歴をリアルタイムで表示 ---
     eventCollectionRef.orderBy('distributedAt', 'desc')
       .onSnapshot(snapshot => {
-        historyTableBody.innerHTML = '';
+        historyTableBody.innerHTML = ''; // 表示を一旦クリア
         allHistoryData = [];
 
         if (snapshot.empty) {
@@ -61,7 +63,7 @@ function initializeHistoryPage() {
         historyTableBody.innerHTML = '<tr><td colspan="3">履歴の読み込みに失敗しました。</td></tr>';
       });
 
-    // --- 全履歴リセット機能（選択したイベントのみ） ---
+    // --- 全履歴リセット機能 ---
     resetButton.addEventListener('click', async () => {
         const inputPassword = prompt(`【${eventName}】の全履歴をリセットします。パスワードを入力してください：`);
         if (inputPassword === null) return;
@@ -83,13 +85,9 @@ function initializeHistoryPage() {
         }
     });
 
-    // --- 検索機能 ---
+    // --- 各ボタンのイベントリスナー ---
     searchInput.addEventListener('input', (e) => { const searchTerm = e.target.value.toLowerCase(); const rows = historyTableBody.getElementsByTagName('tr'); for (const row of rows) { const memberIdCell = row.cells[1]; if (memberIdCell) { const memberIdText = memberIdCell.textContent.toLowerCase(); if (memberIdText.includes(searchTerm)) { row.style.display = ''; } else { row.style.display = 'none'; } } } });
-    
-    // --- 履歴削除機能 ---
     deleteButton.addEventListener('click', async () => { const memberIdToDelete = deleteMemberIdInput.value.trim(); if (!memberIdToDelete) { alert('削除する会員番号を入力してください。'); return; } if (confirm(`会員番号: ${memberIdToDelete} の配布履歴を本当に削除しますか？`)) { try { await eventCollectionRef.doc(memberIdToDelete).delete(); alert('履歴を削除しました。'); deleteMemberIdInput.value = ''; } catch (error) { console.error("Error deleting document: ", error); alert('削除中にエラーが発生しました。'); } } });
-    
-    // --- CSV出力機能 ---
     function convertToCSV(data) { const headers = "配布日時,会員番号,担当スタッフ"; const rows = data.map(row => { const date = row.distributedAt.toDate().toLocaleString('ja-JP'); return `"${date}","${row.memberId}","${row.staffName}"`; }); return `${headers}\n${rows.join('\n')}`; }
     csvExportButton.addEventListener('click', () => { if (allHistoryData.length === 0) { alert('出力するデータがありません。'); return; } const csvData = convertToCSV(allHistoryData); const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); const blob = new Blob([bom, csvData], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.setAttribute('href', url); const now = new Date(); const fileName = `distribution_history_${eventId}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.csv`; link.setAttribute('download', fileName); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); });
 }
