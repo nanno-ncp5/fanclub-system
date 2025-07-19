@@ -3,73 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スタッフ認証</title>
+    <title>ログイン</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>特典配布システム</h1>
-
+        <p>ログインしてください</p>
+        <div id="error-message" class="alert-message error" style="display: none;"></div>
         <div class="form-group">
-            <label for="event-select">イベントを選択</label>
-            <select id="event-select">
-                <option value="tour2025-tokyo-day1">2025 Tour 東京公演 1日目</option>
-                <option value="tour2025-tokyo-day2">2025 Tour 東京公演 2日目</option>
-                <option value="tour2025-osaka-day1">2025 Tour 大阪公演 1日目</option>
-                <option value="tour2025-osaka-day2">2025 Tour 大阪公演 2日目</option>
-                <option value="test-event">テスト用イベント</option>
-            </select>
+            <input type="email" id="email-input" placeholder="メールアドレス">
         </div>
         <div class="form-group">
-            <label for="staff-name-input">担当スタッフ名</label>
-            <input type="text" id="staff-name-input" placeholder="スタッフ名">
+            <input type="password" id="password-input" placeholder="パスワード">
         </div>
-        <button id="start-button">開始</button>
+        <button id="login-button">ログイン</button>
     </div>
 
-    <style>
-        .form-group {
-            text-align: left;
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #ccc;
-            font-size: 14px;
-        }
-        select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #555;
-            background-color: #333;
-            color: #f0f0f0;
-            font-size: 16px;
-        }
-    </style>
-
-    <script>
-        document.getElementById('start-button').addEventListener('click', () => {
-            const staffName = document.getElementById('staff-name-input').value;
-            const eventSelect = document.getElementById('event-select');
-            const eventId = eventSelect.value;
-            const eventName = eventSelect.options[eventSelect.selectedIndex].text;
-
-            if (staffName && eventId) {
-                localStorage.setItem('fanclub-staff-name', staffName);
-                localStorage.setItem('fanclub-event-id', eventId); // イベントIDを保存
-                localStorage.setItem('fanclub-event-name', eventName); // イベント名を保存
-                window.location.href = 'app.html';
-            } else {
-                alert('イベントを選択し、スタッフ名を入力してください。');
-            }
-        });
-
-        const savedStaffName = localStorage.getItem('fanclub-staff-name');
-        if (savedStaffName) {
-            document.getElementById('staff-name-input').value = savedStaffName;
-        }
-    </script>
-</body>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script> </body>
 </html>
