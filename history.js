@@ -7,7 +7,7 @@ const resetButton = document.getElementById('reset-button'); // ★追加
 const collectionName = "distributions";
 
 // ▼▼▼ このパスワードを必ず変更してください ▼▼▼
-const RESET_PASSWORD = "password123"; // ★リセット操作用のパスワード
+const RESET_PASSWORD = "ncp5"; // ★リセット操作用のパスワード
 
 let allHistoryData = [];
 
