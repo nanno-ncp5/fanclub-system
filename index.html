@@ -3,21 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ログイン</title>
+    <title>特典配布システム</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #ccc; font-size: 14px; }
+        select { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #555; background-color: #333; color: #f0f0f0; font-size: 16px; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>特典配布システム</h1>
-        <p>ログインしてください</p>
-        <div id="error-message" class="alert-message error" style="display: none;"></div>
-        <div class="form-group">
-            <input type="email" id="email-input" placeholder="メールアドレス">
+        <div id="error-message" class="alert-message error hidden"></div>
+
+        <div id="login-view">
+            <p>ログインしてください</p>
+            <div class="form-group">
+                <input type="email" id="email-input" placeholder="メールアドレス">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password-input" placeholder="パスワード">
+            </div>
+            <button id="login-button">ログイン</button>
         </div>
-        <div class="form-group">
-            <input type="password" id="password-input" placeholder="パスワード">
+
+        <div id="event-select-view" class="hidden">
+            <p><span id="user-email-display"></span>としてログイン中</p>
+            <div class="form-group">
+                <label for="event-select">イベントを選択</label>
+                <select id="event-select">
+                    <option value="tour2025-tokyo-day1">2025 Tour 東京公演 1日目</option>
+                    <option value="tour2025-tokyo-day2">2025 Tour 東京公演 2日目</option>
+                    <option value="tour2025-osaka-day1">2025 Tour 大阪公演 1日目</option>
+                    <option value="tour2025-osaka-day2">2025 Tour 大阪公演 2日目</option>
+                    <option value="test-event">テスト用イベント</option>
+                </select>
+            </div>
+            <button id="start-button">作業開始</button>
+            <a href="#" id="logout-link" style="display: block; margin-top: 20px; color: #ffaa00;">ログアウト</a>
         </div>
-        <button id="login-button">ログイン</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -25,5 +50,69 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
     <script src="firebase-config.js"></script>
-    <script src="auth.js"></script> </body>
+    <script>
+        // このページのメインロジック
+        const auth = firebase.auth();
+
+        const loginView = document.getElementById('login-view');
+        const eventSelectView = document.getElementById('event-select-view');
+        const loginButton = document.getElementById('login-button');
+        const startButton = document.getElementById('start-button');
+        const logoutLink = document.getElementById('logout-link');
+        const errorMessageDiv = document.getElementById('error-message');
+        const userEmailDisplay = document.getElementById('user-email-display');
+
+        // UI切り替え関数
+        function showLoginView() {
+            loginView.classList.remove('hidden');
+            eventSelectView.classList.add('hidden');
+        }
+        function showEventSelectView(user) {
+            loginView.classList.add('hidden');
+            eventSelectView.classList.remove('hidden');
+            userEmailDisplay.textContent = user.email;
+        }
+
+        // ログイン状態の監視
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // ログイン済みならイベント選択画面を表示
+                showEventSelectView(user);
+            } else {
+                // 未ログインならログイン画面を表示
+                showLoginView();
+            }
+        });
+
+        // ログインボタンの処理
+        loginButton.addEventListener('click', () => {
+            const email = document.getElementById('email-input').value;
+            const password = document.getElementById('password-input').value;
+            errorMessageDiv.classList.add('hidden');
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => {
+                    errorMessageDiv.textContent = 'メールアドレスまたはパスワードが違います。';
+                    errorMessageDiv.classList.remove('hidden');
+                });
+        });
+
+        // 作業開始ボタンの処理
+        startButton.addEventListener('click', () => {
+            const eventSelect = document.getElementById('event-select');
+            const eventId = eventSelect.value;
+            const eventName = eventSelect.options[eventSelect.selectedIndex].text;
+            
+            localStorage.setItem('fanclub-event-id', eventId);
+            localStorage.setItem('fanclub-event-name', eventName);
+            window.location.href = 'app.html';
+        });
+
+        // ログアウトリンクの処理
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            auth.signOut();
+        });
+    </script>
+</body>
 </html>
