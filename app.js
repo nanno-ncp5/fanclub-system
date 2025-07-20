@@ -1,17 +1,15 @@
-// ▼▼▼ 冒頭部分を修正 ▼▼▼
-checkAuthState(); // まずログインしているかチェック
+// ▼▼▼ 冒頭部分（変更なし）▼▼▼
+checkAuthState(); 
 
 let staffEmail = '';
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // ログインしているユーザーのメールアドレスを取得
         staffEmail = user.email;
-        // ページの初期化処理を呼び出す
         initializePage();
     }
 });
-// ▲▲▲ 修正ここまで ▲▲▲
+// ▲▲▲ 冒頭部分（変更なし）▲▲▲
 
 function initializePage() {
     const eventId = localStorage.getItem('fanclub-event-id');
@@ -23,7 +21,6 @@ function initializePage() {
         return;
     }
     
-    // ▼▼▼ `staff-email-display` に担当者情報を表示 ▼▼▼
     const staffDisplay = document.getElementById('staff-email-display');
     if (staffDisplay) {
         staffDisplay.textContent = staffEmail;
@@ -49,13 +46,26 @@ function initializePage() {
 
     function toHalfWidth(str) { if (!str) return ""; return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); }); }
 
+    // --- ▼▼▼ ここからカウンター機能を修正 ▼▼▼ ---
     function updateCounters() {
-        eventCollectionRef.get().then(snap => { totalCountEl.textContent = snap.size; });
+        // 累計配布数（ツアー全体）をリアルタイムで取得
+        masterCollectionRef.onSnapshot(snapshot => {
+            totalCountEl.textContent = snapshot.size;
+        });
+
+        // 当日配布数（このイベントのみ）をリアルタイムで取得
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        eventCollectionRef.where('distributedAt', '>=', startOfDay).where('distributedAt', '<', endOfDay).onSnapshot(snapshot => { todayCountEl.textContent = snapshot.size; });
+
+        eventCollectionRef
+          .where('distributedAt', '>=', startOfDay)
+          .where('distributedAt', '<', endOfDay)
+          .onSnapshot(snapshot => {
+              todayCountEl.textContent = snapshot.size;
+          });
     }
+    // --- ▲▲▲ カウンター機能の修正ここまで ▲▲▲ ---
 
     async function handleDistribution(rawMemberId) {
         const memberId = toHalfWidth(rawMemberId).trim();
@@ -70,12 +80,12 @@ function initializePage() {
                 showAlert(`【ツアーで配布済み】\nこの会員は既に「${previousEventName}」で特典を受け取っています。`, 'error');
             } else {
                 const batch = db.batch();
-                // ▼▼▼ staffName を staffEmail に変更 ▼▼▼
                 const distributionData = { memberId: memberId, staffName: staffEmail, distributedAt: new Date(), eventId: eventId, eventName: eventName };
                 const eventDocRef = eventCollectionRef.doc(memberId);
                 batch.set(eventDocRef, distributionData); batch.set(masterDocRef, distributionData);
                 await batch.commit();
-                showAlert('配布完了しました！', 'success'); updateCounters();
+                showAlert('配布完了しました！', 'success'); 
+                // updateCounters(); // onSnapshotを使っているので、ここでの呼び出しは不要
             }
         } catch (error) { console.error("Error processing distribution: ", error); showAlert('エラーが発生しました。コンソールを確認してください。', 'error'); }
         memberIdInput.value = ''; memberIdInput.disabled = false; submitButton.disabled = false; memberIdInput.focus();
@@ -92,6 +102,7 @@ function initializePage() {
     submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
     memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
 
+    // --- 初期化処理 ---
     updateCounters();
     memberIdInput.focus();
 }
