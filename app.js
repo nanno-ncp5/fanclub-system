@@ -1,15 +1,12 @@
-// ▼▼▼ 冒頭部分（変更なし）▼▼▼
+// 冒頭部分（変更なし）
 checkAuthState(); 
-
 let staffEmail = '';
-
 auth.onAuthStateChanged((user) => {
     if (user) {
         staffEmail = user.email;
         initializePage();
     }
 });
-// ▲▲▲ 冒頭部分（変更なし）▲▲▲
 
 function initializePage() {
     const eventId = localStorage.getItem('fanclub-event-id');
@@ -38,8 +35,9 @@ function initializePage() {
     const alertMessage = document.getElementById('alert-message');
     const totalCountEl = document.getElementById('total-count');
     const todayCountEl = document.getElementById('today-count');
-    const startQrButton = document.getElementById('start-qr-button');
-    const stopQrButton = document.getElementById('stop-qr-button');
+    // ▼▼▼ QRコード関連の変数を削除 ▼▼▼
+    // const startQrButton = ...
+    // const stopQrButton = ...
 
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
     const masterCollectionRef = db.collection("master_distributions");
@@ -55,14 +53,10 @@ function initializePage() {
     }
 
     async function handleDistribution(rawMemberId) {
-        // ▼▼▼ ここからが修正箇所です ▼▼▼
-        // 半角化・空白除去に加え、先頭のゼロを除去する処理を追加
         let memberId = toHalfWidth(rawMemberId).trim();
         if (memberId) {
             memberId = memberId.replace(/^0+(?!$)/, '');
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
-
         if (!memberId) { alert("会員番号を入力してください。"); memberIdInput.value = ''; return; }
         memberIdInput.disabled = true; submitButton.disabled = true;
         try {
@@ -86,15 +80,18 @@ function initializePage() {
 
     function showAlert(message, type) { alertMessage.textContent = message; alertMessage.className = type; alertMessage.style.display = 'block'; setTimeout(() => { alertMessage.style.display = 'none'; }, 6000); }
 
-    let html5QrCode = null;
-    function onScanSuccess(decodedText, decodedResult) { html5QrCode.stop().then(() => { toggleScannerButtons(false); handleDistribution(decodedText); }).catch(err => console.error(err)); }
-    function onScanFailure(error) {}
-    function toggleScannerButtons(isScanning) { startQrButton.style.display = isScanning ? 'none' : 'block'; stopQrButton.style.display = isScanning ? 'block' : 'none'; document.getElementById('qr-reader').style.display = isScanning ? 'block' : 'none'; }
-    startQrButton.addEventListener('click', () => { html5QrCode = new Html5Qrcode("qr-reader"); toggleScannerButtons(true); html5QrCode.start( { facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure ).catch(err => { alert("カメラの起動に失敗しました。"); toggleScannerButtons(false); }); });
-    stopQrButton.addEventListener('click', () => { if (html5QrCode) { html5QrCode.stop().then(() => { toggleScannerButtons(false); }).catch(err => console.error(err)); } });
+    // ▼▼▼ QRコードリーダー関連のプログラムをここからすべて削除しました ▼▼▼
+    // let html5QrCode = ...
+    // function onScanSuccess(...)
+    // ...
+    // stopQrButton.addEventListener(...)
+    // ▲▲▲ ここまで ▲▲▲
+
+    // --- イベントリスナー ---
     submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
     memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
 
+    // --- 初期化処理 ---
     updateCounters();
     memberIdInput.focus();
 }
