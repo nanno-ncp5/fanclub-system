@@ -46,29 +46,23 @@ function initializePage() {
 
     function toHalfWidth(str) { if (!str) return ""; return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); }); }
 
-    // --- ▼▼▼ ここからカウンター機能を修正 ▼▼▼ ---
     function updateCounters() {
-        // 累計配布数（ツアー全体）をリアルタイムで取得
-        masterCollectionRef.onSnapshot(snapshot => {
-            totalCountEl.textContent = snapshot.size;
-        });
-
-        // 当日配布数（このイベントのみ）をリアルタイムで取得
+        masterCollectionRef.onSnapshot(snapshot => { totalCountEl.textContent = snapshot.size; });
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-
-        eventCollectionRef
-          .where('distributedAt', '>=', startOfDay)
-          .where('distributedAt', '<', endOfDay)
-          .onSnapshot(snapshot => {
-              todayCountEl.textContent = snapshot.size;
-          });
+        eventCollectionRef.where('distributedAt', '>=', startOfDay).where('distributedAt', '<', endOfDay).onSnapshot(snapshot => { todayCountEl.textContent = snapshot.size; });
     }
-    // --- ▲▲▲ カウンター機能の修正ここまで ▲▲▲ ---
 
     async function handleDistribution(rawMemberId) {
-        const memberId = toHalfWidth(rawMemberId).trim();
+        // ▼▼▼ ここからが修正箇所です ▼▼▼
+        // 半角化・空白除去に加え、先頭のゼロを除去する処理を追加
+        let memberId = toHalfWidth(rawMemberId).trim();
+        if (memberId) {
+            memberId = memberId.replace(/^0+(?!$)/, '');
+        }
+        // ▲▲▲ 修正ここまで ▲▲▲
+
         if (!memberId) { alert("会員番号を入力してください。"); memberIdInput.value = ''; return; }
         memberIdInput.disabled = true; submitButton.disabled = true;
         try {
@@ -85,7 +79,6 @@ function initializePage() {
                 batch.set(eventDocRef, distributionData); batch.set(masterDocRef, distributionData);
                 await batch.commit();
                 showAlert('配布完了しました！', 'success'); 
-                // updateCounters(); // onSnapshotを使っているので、ここでの呼び出しは不要
             }
         } catch (error) { console.error("Error processing distribution: ", error); showAlert('エラーが発生しました。コンソールを確認してください。', 'error'); }
         memberIdInput.value = ''; memberIdInput.disabled = false; submitButton.disabled = false; memberIdInput.focus();
@@ -102,7 +95,6 @@ function initializePage() {
     submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
     memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
 
-    // --- 初期化処理 ---
     updateCounters();
     memberIdInput.focus();
 }
