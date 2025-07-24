@@ -1,6 +1,6 @@
-// 冒頭部分（変更なし）
 checkAuthState(); 
 let staffEmail = '';
+
 auth.onAuthStateChanged((user) => {
     if (user) {
         staffEmail = user.email;
@@ -32,12 +32,8 @@ function initializePage() {
 
     const memberIdInput = document.getElementById('member-id-input');
     const submitButton = document.getElementById('submit-button');
-    const alertMessage = document.getElementById('alert-message');
     const totalCountEl = document.getElementById('total-count');
     const todayCountEl = document.getElementById('today-count');
-    // ▼▼▼ QRコード関連の変数を削除 ▼▼▼
-    // const startQrButton = ...
-    // const stopQrButton = ...
 
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
     const masterCollectionRef = db.collection("master_distributions");
@@ -53,11 +49,26 @@ function initializePage() {
     }
 
     async function handleDistribution(rawMemberId) {
-        let memberId = toHalfWidth(rawMemberId).trim();
-        if (memberId) {
-            memberId = memberId.replace(/^0+(?!$)/, '');
+        const memberIdRaw = toHalfWidth(rawMemberId).trim();
+
+        if (!memberIdRaw) {
+            alert("会員番号を入力してください。");
+            return;
         }
-        if (!memberId) { alert("会員番号を入力してください。"); memberIdInput.value = ''; return; }
+
+        // ▼▼▼ ここからが追加・修正箇所です ▼▼▼
+        // 半角数字のみかチェックするための正規表現
+        const numericRegex = /^[0-9]+$/;
+        if (!numericRegex.test(memberIdRaw)) {
+            showAlert('会員番号は半角数字で入力してください。', 'error');
+            memberIdInput.value = ''; // 入力欄をクリア
+            return; // 処理をここで中断
+        }
+
+        // 先行ゼロを除去
+        let memberId = memberIdRaw.replace(/^0+(?!$)/, '');
+        // ▲▲▲ ここまで ▲▲▲
+        
         memberIdInput.disabled = true; submitButton.disabled = true;
         try {
             const masterDocRef = masterCollectionRef.doc(memberId);
@@ -78,18 +89,21 @@ function initializePage() {
         memberIdInput.value = ''; memberIdInput.disabled = false; submitButton.disabled = false; memberIdInput.focus();
     }
 
-    function showAlert(message, type) { alertMessage.textContent = message; alertMessage.className = type; alertMessage.style.display = 'block'; setTimeout(() => { alertMessage.style.display = 'none'; }, 6000); }
-
-    // ▼▼▼ QRコードリーダー関連のプログラムをここからすべて削除しました ▼▼▼
-    // let html5QrCode = ...
-    // function onScanSuccess(...)
-    // ...
-    // stopQrButton.addEventListener(...)
-    // ▲▲▲ ここまで ▲▲▲
+    function showAlert(message, type) {
+        const alertMessage = document.getElementById('alert-message');
+        alertMessage.textContent = message;
+        alertMessage.className = type;
+        alertMessage.style.display = 'block';
+        setTimeout(() => { alertMessage.style.display = 'none'; }, 6000);
+    }
 
     // --- イベントリスナー ---
     submitButton.addEventListener('click', () => handleDistribution(memberIdInput.value));
-    memberIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleDistribution(memberIdInput.value); } });
+    memberIdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleDistribution(memberIdInput.value);
+        }
+    });
 
     // --- 初期化処理 ---
     updateCounters();
