@@ -1,15 +1,12 @@
 // 認証状態の確定を待ってから、ページの処理を開始する
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // ログインが確認できたら、ページの初期化処理を呼び出す
         initializeHistoryPage();
     } else {
-        // 未ログインなら、ログインページに強制的に戻す
         window.location.href = 'index.html';
     }
 });
 
-// ページの全処理をこの関数の中に閉じ込める
 function initializeHistoryPage() {
     const eventId = localStorage.getItem('fanclub-event-id');
     const eventName = localStorage.getItem('fanclub-event-name');
@@ -31,8 +28,10 @@ function initializeHistoryPage() {
     const resetButton = document.getElementById('reset-button');
 
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
+    const masterCollectionRef = db.collection("master_distributions"); // 全体履歴への参照を追加
     
-    const RESET_PASSWORD = "ncp5"; 
+    const RESET_PASSWORD = "password123"; 
+
     let allHistoryData = [];
 
     // --- 履歴をリアルタイムで表示 ---
@@ -59,7 +58,7 @@ function initializeHistoryPage() {
         historyTableBody.innerHTML = '<tr><td colspan="3">履歴の読み込みに失敗しました。</td></tr>';
       });
 
-    // --- 全履歴リセット機能 ---
+    // --- ▼▼▼ 全履歴リセット機能を修正 ▼▼▼ ---
     resetButton.addEventListener('click', async () => {
         const inputPassword = prompt(`【${eventName}】の全履歴をリセットします。パスワードを入力してください：`);
         if (inputPassword === null) return;
@@ -67,11 +66,21 @@ function initializeHistoryPage() {
             alert("パスワードが違います。");
             return;
         }
-        if (confirm(`本当によろしいですか？【${eventName}】の配布履歴が完全に削除され、元に戻すことはできません。`)) {
+        if (confirm(`本当によろしいですか？【${eventName}】の配布履歴が、イベント履歴と全体の履歴の両方から完全に削除されます。`)) {
             try {
+                // まず、このイベントの全ドキュメントを取得
                 const querySnapshot = await eventCollectionRef.get();
                 const batch = db.batch();
-                querySnapshot.forEach(doc => { batch.delete(doc.ref); });
+
+                querySnapshot.forEach(doc => {
+                    const memberId = doc.id;
+                    // 1. イベント履歴から削除
+                    batch.delete(doc.ref);
+                    // 2. 全体履歴からも削除
+                    const masterDocRef = masterCollectionRef.doc(memberId);
+                    batch.delete(masterDocRef);
+                });
+                
                 await batch.commit();
                 alert(`【${eventName}】の全履歴をリセットしました。`);
             } catch (error) {
@@ -83,7 +92,38 @@ function initializeHistoryPage() {
 
     // --- 各ボタンのイベントリスナー ---
     searchInput.addEventListener('input', (e) => { const searchTerm = e.target.value.toLowerCase(); const rows = historyTableBody.getElementsByTagName('tr'); for (const row of rows) { const memberIdCell = row.cells[1]; if (memberIdCell) { const memberIdText = memberIdCell.textContent.toLowerCase(); if (memberIdText.includes(searchTerm)) { row.style.display = ''; } else { row.style.display = 'none'; } } } });
-    deleteButton.addEventListener('click', async () => { const memberIdToDelete = deleteMemberIdInput.value.trim(); if (!memberIdToDelete) { alert('削除する会員番号を入力してください。'); return; } if (confirm(`会員番号: ${memberIdToDelete} の配布履歴を本当に削除しますか？`)) { try { await eventCollectionRef.doc(memberIdToDelete).delete(); alert('履歴を削除しました。'); deleteMemberIdInput.value = ''; } catch (error) { console.error("Error deleting document: ", error); alert('削除中にエラーが発生しました。'); } } });
+    
+    // --- ▼▼▼ 履歴削除機能を修正 ▼▼▼ ---
+    deleteButton.addEventListener('click', async () => {
+        const memberIdToDelete = deleteMemberIdInput.value.trim();
+        if (!memberIdToDelete) {
+            alert('削除する会員番号を入力してください。');
+            return;
+        }
+        if (confirm(`会員番号: ${memberIdToDelete} の配布履歴を、イベント履歴と全体の履歴の両方から削除しますか？`)) {
+            try {
+                // 2つのドキュメントを同時に削除するため、バッチ処理を使用
+                const batch = db.batch();
+
+                // 1. イベント履歴のドキュメント
+                const eventDocRef = eventCollectionRef.doc(memberIdToDelete);
+                batch.delete(eventDocRef);
+
+                // 2. 全体履歴のドキュメント
+                const masterDocRef = masterCollectionRef.doc(memberIdToDelete);
+                batch.delete(masterDocRef);
+
+                await batch.commit(); // 両方を同時に削除
+
+                alert('履歴を削除しました。');
+                deleteMemberIdInput.value = '';
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                alert('削除中にエラーが発生しました。');
+            }
+        }
+    });
+    
     function convertToCSV(data) { const headers = "配布日時,会員番号,担当スタッフ"; const rows = data.map(row => { const date = row.distributedAt.toDate().toLocaleString('ja-JP'); return `"${date}","${row.memberId}","${row.staffName}"`; }); return `${headers}\n${rows.join('\n')}`; }
     csvExportButton.addEventListener('click', () => { if (allHistoryData.length === 0) { alert('出力するデータがありません。'); return; } const csvData = convertToCSV(allHistoryData); const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); const blob = new Blob([bom, csvData], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); const url = URL.createObjectURL(blob); link.setAttribute('href', url); const now = new Date(); const fileName = `distribution_history_${eventId}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.csv`; link.setAttribute('download', fileName); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); });
 }
