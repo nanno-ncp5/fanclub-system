@@ -30,7 +30,7 @@ function initializeHistoryPage() {
     const eventCollectionRef = db.collection("events").doc(eventId).collection("distributions");
     const masterCollectionRef = db.collection("master_distributions"); // 全体履歴への参照を追加
     
-    const RESET_PASSWORD = "password123"; 
+    const RESET_PASSWORD = "ncp5"; 
 
     let allHistoryData = [];
 
