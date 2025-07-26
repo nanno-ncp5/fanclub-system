@@ -10,12 +10,11 @@ auth.onAuthStateChanged((user) => {
 function initializeMasterHistoryPage() {
     const historyTableBody = document.getElementById('history-table-body');
     const csvExportButton = document.getElementById('csv-export-button');
-    const resetMasterButton = document.getElementById('reset-master-button'); // ★追加
+    const resetMasterButton = document.getElementById('reset-master-button');
 
     const masterCollectionRef = db.collection("master_distributions");
     
-    // ▼▼▼ マスターリセット用のパスワード（必ず変更してください！）▼▼▼
-    const MASTER_RESET_PASSWORD = "NCP5";
+    const MASTER_RESET_PASSWORD = "NCP5"; 
     
     let allHistoryData = [];
 
@@ -35,12 +34,7 @@ function initializeMasterHistoryPage() {
             allHistoryData.push(data);
             const tr = document.createElement('tr');
             const distributedDate = data.distributedAt.toDate().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-            tr.innerHTML = `
-                <td>${distributedDate}</td>
-                <td>${data.memberId}</td>
-                <td>${data.staffName}</td>
-                <td>${data.eventName || '不明'}</td>
-            `;
+            tr.innerHTML = `<td>${distributedDate}</td><td>${data.memberId}</td><td>${data.staffName}</td><td>${data.eventName || '不明'}</td>`;
             historyTableBody.appendChild(tr);
         });
       }, error => {
@@ -51,57 +45,63 @@ function initializeMasterHistoryPage() {
     // --- CSV出力機能 ---
     function convertToCSV(data) {
         const headers = "配布日時,会員番号,担当スタッフ,配布イベント";
-        const rows = data.map(row => {
-            const date = row.distributedAt.toDate().toLocaleString('ja-JP');
-            return `"${date}","${row.memberId}","${row.staffName}","${row.eventName || '不明'}"`;
-        });
+        const rows = data.map(row => `"${row.distributedAt.toDate().toLocaleString('ja-JP')}","${row.memberId}","${row.staffName}","${row.eventName || '不明'}"`);
         return `${headers}\n${rows.join('\n')}`;
     }
 
     csvExportButton.addEventListener('click', () => {
-        if (allHistoryData.length === 0) {
-            alert('出力するデータがありません。');
-            return;
-        }
+        if (allHistoryData.length === 0) { alert('出力するデータがありません。'); return; }
         const csvData = convertToCSV(allHistoryData);
         const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
         const blob = new Blob([bom, csvData], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
+        link.href = URL.createObjectURL(blob);
         const now = new Date();
-        const fileName = `master_distribution_history_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.csv`;
-        link.setAttribute('download', fileName);
-        link.style.visibility = 'hidden'; document.body.appendChild(link);
-        link.click(); document.body.removeChild(link);
+        link.download = `master_distribution_history_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     });
 
-    // --- ★★★ここから追加★★★ ---
-    // --- ツアー全履歴リセット機能 ---
+    // --- ▼▼▼ ツアー全履歴リセット機能を修正 ▼▼▼ ---
     resetMasterButton.addEventListener('click', async () => {
         const inputPassword = prompt("【警告】ツアー全体の全履歴が削除されます。マスターパスワードを入力してください：");
 
-        if (inputPassword === null) return; // キャンセルされた場合
+        if (inputPassword === null) return; 
 
         if (inputPassword !== MASTER_RESET_PASSWORD) {
             alert("マスターパスワードが違います。");
             return;
         }
 
-        if (confirm("本当によろしいですか？\n\nこれにより【ツアー全体の配布履歴】がすべて削除されます。\nこの操作は絶対に元に戻せません。")) {
+        if (confirm("本当によろしいですか？\n\nこれにより【ツアー全体の配布履歴】と、関連する【すべてのイベント履歴】が削除されます。\nこの操作は絶対に元に戻せません。")) {
             try {
-                const querySnapshot = await masterCollectionRef.get();
+                // 1. 全体履歴のすべてのドキュメントを取得
+                const masterSnapshot = await masterCollectionRef.get();
                 const batch = db.batch();
-                querySnapshot.forEach(doc => {
+
+                masterSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const memberId = data.memberId;
+                    const eventId = data.eventId;
+
+                    // 2. 全体履歴からドキュメントを削除するようバッチに追加
                     batch.delete(doc.ref);
+
+                    // 3. 対応するイベント履歴のドキュメントも削除するようバッチに追加
+                    if (eventId && memberId) {
+                        const eventDocRef = db.collection("events").doc(eventId).collection("distributions").doc(memberId);
+                        batch.delete(eventDocRef);
+                    }
                 });
+
+                // 4. バッチ処理を実行して、すべての削除を一度に行う
                 await batch.commit();
-                alert("ツアー全体の全履歴をリセットしました。");
+                alert("ツアー全体の全履歴と、関連するすべてのイベント履歴をリセットしました。");
             } catch (error) {
-                console.error("Error resetting master history: ", error);
+                console.error("Error resetting all history: ", error);
                 alert("リセット中にエラーが発生しました。");
             }
         }
     });
-    // --- ★★★ここまで追加★★★ ---
 }
